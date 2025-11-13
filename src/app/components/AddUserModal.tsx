@@ -14,6 +14,7 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, isDark }: AddU
   const [email, setEmail] = useState('');
   const [birthdayDate, setBirthdayDate] = useState('');
   const [working, setWorking] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; birthdayDate?: string }>({});
 
   // Fechar ao pressionar ESC
   useEffect(() => {
@@ -32,22 +33,64 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, isDark }: AddU
     };
   }, [isOpen, onClose]);
 
+  const validateForm = () => {
+    const newErrors: { name?: string; email?: string; birthdayDate?: string } = {};
+
+    // Validar nome
+    if (!name.trim()) {
+      newErrors.name = 'O nome é obrigatório';
+    } else if (name.trim().length < 3) {
+      newErrors.name = 'O nome deve ter no mínimo 3 caracteres';
+    } else if (name.trim().length > 100) {
+      newErrors.name = 'O nome deve ter no máximo 100 caracteres';
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim()) {
+      newErrors.email = 'O email é obrigatório';
+    } else if (!emailRegex.test(email.trim())) {
+      newErrors.email = 'Email inválido';
+    }
+
+    // Validar data de aniversário (se fornecida)
+    if (birthdayDate) {
+      const selectedDate = new Date(birthdayDate);
+      const today = new Date();
+      const minDate = new Date('1900-01-01');
+
+      if (selectedDate > today) {
+        newErrors.birthdayDate = 'A data não pode ser no futuro';
+      } else if (selectedDate < minDate) {
+        newErrors.birthdayDate = 'Data inválida';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && email.trim()) {
-      onSubmit({
-        name,
-        email,
-        birthday_date: birthdayDate || undefined,
-        working: working || undefined,
-      });
-      // Reset form
-      setName('');
-      setEmail('');
-      setBirthdayDate('');
-      setWorking('');
-      onClose();
+
+    if (!validateForm()) {
+      return;
     }
+
+    onSubmit({
+      name: name.trim(),
+      email: email.trim(),
+      birthday_date: birthdayDate || undefined,
+      working: working.trim() || undefined,
+    });
+
+    // Reset form
+    setName('');
+    setEmail('');
+    setBirthdayDate('');
+    setWorking('');
+    setErrors({});
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -103,15 +146,29 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, isDark }: AddU
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors({ ...errors, name: undefined });
+              }}
               placeholder="Ex: João Silva"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.name
+                ? 'border-red-500 focus:ring-red-500'
+                : 'focus:ring-green-500 focus:border-transparent'
+                } ${
                 isDark 
                   ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' 
                   : 'bg-white border-slate-200 text-slate-900'
               }`}
               required
             />
+            {errors.name && (
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-fade-in">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.name}
+              </p>
+            )}
           </div>
 
           {/* Email */}
@@ -124,15 +181,29 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, isDark }: AddU
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) setErrors({ ...errors, email: undefined });
+              }}
               placeholder="joao.silva@exemplo.com"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.email
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'focus:ring-green-500 focus:border-transparent'
+                } ${
                 isDark 
                   ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' 
                   : 'bg-white border-slate-200 text-slate-900'
               }`}
               required
             />
+            {errors.email && (
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-fade-in">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.email}
+              </p>
+            )}
           </div>
 
           {/* Data de Nascimento */}
@@ -145,13 +216,28 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, isDark }: AddU
             <input
               type="date"
               value={birthdayDate}
-              onChange={(e) => setBirthdayDate(e.target.value)}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+              onChange={(e) => {
+                setBirthdayDate(e.target.value);
+                if (errors.birthdayDate) setErrors({ ...errors, birthdayDate: undefined });
+              }}
+              max={new Date().toISOString().split('T')[0]}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.birthdayDate
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'focus:ring-green-500 focus:border-transparent'
+                } ${
                 isDark 
                   ? 'bg-slate-700 border-slate-600 text-white' 
                   : 'bg-white border-slate-200 text-slate-900'
               }`}
             />
+            {errors.birthdayDate && (
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-fade-in">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.birthdayDate}
+              </p>
+            )}
           </div>
 
           {/* Cargo/Função */}

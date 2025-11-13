@@ -22,6 +22,7 @@ export default function Home() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // Função para buscar dados da API
   const fetchData = async () => {
@@ -63,8 +64,6 @@ export default function Home() {
     }
   };
 
-  const updateTasks = async () => {};
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -90,6 +89,59 @@ export default function Home() {
       }
     } catch {
       setError('Erro ao criar tarefa');
+    }
+  };
+
+  // Função para abrir modal de edição
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsTaskModalOpen(true);
+  };
+
+  // Função para excluir tarefa
+  const handleDeleteTask = async (taskId: number) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchData(); // Recarrega as tarefas
+      } else {
+        setError('Erro ao excluir tarefa');
+      }
+    } catch {
+      setError('Erro ao excluir tarefa');
+    }
+  };
+
+  // Função unificada para criar ou atualizar
+  const handleTaskSubmit = async (taskData: { title: string; description: string; status: string; userId: number }) => {
+    try {
+      if (editingTask) {
+        // Modo de edição - atualizar tarefa existente
+        const response = await fetch(`${API_URL}/api/tasks/${editingTask.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...taskData, id: editingTask.id }),
+        });
+
+        if (response.ok) {
+          await fetchData();
+          setEditingTask(null);
+        } else {
+          setError('Erro ao atualizar tarefa');
+        }
+      } else {
+        // Modo de criação - adicionar nova tarefa
+        await handleAddTask(taskData);
+      }
+    } catch {
+      setError(editingTask ? 'Erro ao atualizar tarefa' : 'Erro ao criar tarefa');
     }
   };
 
@@ -235,6 +287,8 @@ export default function Home() {
                     color="slate"
                     status="nao_iniciada"
                     onTaskDrop={handleTaskDrop}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
                     isDark={isDark}
                   />
                 </div>
@@ -248,6 +302,8 @@ export default function Home() {
                     color="amber"
                     status="em_progresso"
                     onTaskDrop={handleTaskDrop}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
                     isDark={isDark}
                   />
                 </div>
@@ -261,6 +317,8 @@ export default function Home() {
                     color="green"
                     status="concluida"
                     onTaskDrop={handleTaskDrop}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
                     isDark={isDark}
                   />
                 </div>
@@ -278,10 +336,14 @@ export default function Home() {
       {/* Modais */}
       <AddTaskModal
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        onClose={() => {
+          setIsTaskModalOpen(false);
+          setEditingTask(null); // Limpa a tarefa em edição ao fechar
+        }}
         users={users}
-        onSubmit={handleAddTask}
+        onSubmit={handleTaskSubmit}
         isDark={isDark}
+        task={editingTask || undefined}
       />
 
       <AddUserModal

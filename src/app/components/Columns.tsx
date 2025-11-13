@@ -11,10 +11,12 @@ interface ColumnProps {
   color: 'slate' | 'red' | 'green' | 'blue' | 'amber';
   status: Task['status'];
   onTaskDrop: (taskId: number, newStatus: Task['status']) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: number) => void;
   isDark: boolean;
 }
 
-export function Column({ title, count, tasks, color, status, onTaskDrop, isDark }: ColumnProps) {
+export function Column({ title, count, tasks, color, status, onTaskDrop, onEdit, onDelete, isDark }: ColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const colorStyles = {
     slate: {
@@ -113,7 +115,7 @@ export function Column({ title, count, tasks, color, status, onTaskDrop, isDark 
               className="animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <TaskCard task={task} isDark={isDark} />
+              <TaskCard task={task} isDark={isDark} onEdit={onEdit} onDelete={onDelete} />
             </div>
           ))
         ) : (

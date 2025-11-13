@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, Task } from '../types';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -9,15 +9,35 @@ interface AddTaskModalProps {
   users: User[];
   onSubmit: (task: { title: string; description: string; status: string; userId: number }) => void;
   isDark: boolean;
+  task?: Task; // Tarefa opcional para modo de edição
 }
 
-export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark }: AddTaskModalProps) {
+export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark, task }: AddTaskModalProps) {
+  const editMode = !!task; // Se task existe, está em modo de edição
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'nao_iniciada' | 'em_progresso' | 'concluida'>('nao_iniciada');
   const [userId, setUserId] = useState<number>(0);
+  const [errors, setErrors] = useState<{ title?: string; userId?: string }>({});
 
-  // Fechar ao pressionar ESC
+  // Atualizar formulário quando o modal abrir com uma tarefa
+  useEffect(() => {
+    if (isOpen) {
+      if (task) {
+        setTitle(task.title);
+        setDescription(task.description || '');
+        setStatus(task.status);
+        setUserId(task.userId);
+      } else {
+        // Resetar quando não está editando
+        setTitle('');
+        setDescription('');
+        setStatus('nao_iniciada');
+        setUserId(0);
+      }
+    }
+  }, [isOpen, task]);  // Fechar ao pressionar ESC
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -34,17 +54,45 @@ export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark 
     };
   }, [isOpen, onClose]);
 
+  const validateForm = () => {
+    const newErrors: { title?: string; userId?: string } = {};
+
+    // Validar título
+    if (!title.trim()) {
+      newErrors.title = 'O título é obrigatório';
+    } else if (title.trim().length < 3) {
+      newErrors.title = 'O título deve ter no mínimo 3 caracteres';
+    } else if (title.trim().length > 100) {
+      newErrors.title = 'O título deve ter no máximo 100 caracteres';
+    }
+
+    // Validar usuário
+    if (!userId || userId === 0) {
+      newErrors.userId = 'Selecione um utilizador';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim() && userId > 0) {
-      onSubmit({ title, description, status, userId });
-      // Reset form
+
+    if (!validateForm()) {
+      return;
+    }
+
+    onSubmit({ title: title.trim(), description: description.trim(), status, userId });
+
+    // Reset form apenas se não estiver editando
+    if (!editMode) {
       setTitle('');
       setDescription('');
       setStatus('nao_iniciada');
       setUserId(0);
-      onClose();
     }
+    setErrors({});
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -73,8 +121,12 @@ export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark 
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Nova Tarefa</h2>
-                <p className="text-blue-100 text-sm">Adicione uma nova tarefa ao board</p>
+                <h2 className="text-xl font-bold text-white">
+                  {editMode ? 'Editar Tarefa' : 'Nova Tarefa'}
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  {editMode ? 'Atualize as informações da tarefa' : 'Adicione uma nova tarefa ao board'}
+                </p>
               </div>
             </div>
             <button
@@ -100,15 +152,29 @@ export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark 
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (errors.title) setErrors({ ...errors, title: undefined });
+              }}
               placeholder="Ex: Implementar autenticação"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 focus:scale-[1.01] ${
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 focus:scale-[1.01] ${errors.title
+                ? 'border-red-500 focus:ring-red-500'
+                : 'focus:ring-blue-500 focus:border-transparent'
+                } ${
                 isDark 
                   ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' 
                   : 'bg-white border-slate-200 text-slate-900'
               }`}
               required
             />
+            {errors.title && (
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-fade-in">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.title}
+              </p>
+            )}
           </div>
 
           {/* Descrição */}
@@ -163,8 +229,14 @@ export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark 
             </label>
             <select
               value={userId}
-              onChange={(e) => setUserId(Number(e.target.value))}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+              onChange={(e) => {
+                setUserId(Number(e.target.value));
+                if (errors.userId) setErrors({ ...errors, userId: undefined });
+              }}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.userId
+                ? 'border-red-500 focus:ring-red-500'
+                : 'focus:ring-blue-500 focus:border-transparent'
+                } ${
                 isDark 
                   ? 'bg-slate-700 border-slate-600 text-white' 
                   : 'bg-white border-slate-200 text-slate-900'
@@ -178,6 +250,14 @@ export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark 
                 </option>
               ))}
             </select>
+            {errors.userId && (
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-fade-in">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.userId}
+              </p>
+            )}
           </div>
 
           {/* Buttons */}
@@ -197,7 +277,7 @@ export default function AddTaskModal({ isOpen, onClose, users, onSubmit, isDark 
               type="submit"
               className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
             >
-              Criar Tarefa
+              {editMode ? 'Atualizar Tarefa' : 'Criar Tarefa'}
             </button>
           </div>
         </form>
