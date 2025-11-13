@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+*.lcov
+.nyc_output
 
 # next.js
 /.next/
@@ -19,19 +21,30 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+lerna-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -39,3 +52,40 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# turbo
+.turbo
+
+# OS
+Thumbs.db
+
+# Package manager locks (opcional - comente se quiser versionar)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Storybook
+storybook-static
+
+# PWA files
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
